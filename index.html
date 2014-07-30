@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1.0">
+  <title>承包欧巴——根本停不下来</title>
+  <style>
+    html, body {
+      height: 100%;
+      background-color: #3d566e;
+      color: whitesmoke;
+      font-family: STHeiti, Arial, sans-serif;
+    }
+    body {
+      position: relative;
+      padding: 0 8px;
+    }
+    .targetwrap {
+      display: inline-block;
+      padding: 5px;
+      background-color: #3498db;
+      border-radius: 5px;
+    }
+    .targetwrap.tap {
+      background-color: #f1c40f;
+    }
+    .target {
+      display: inline-block;
+      height: 150px;
+      width: 150px;
+      float: left;
+    }
+    #oba {
+      background: url(images/oba.jpg) no-repeat;
+    }
+    #baoz {
+      background: url(images/baoz.jpg) no-repeat;
+    }
+    #timeremain {
+      color: yellow;
+      font-size: 1.2rem;
+    }
+    .row {
+      padding: 2px 0;
+      text-align: center;
+      overflow: auto;
+    }
+    .textcenter {
+      text-align: center;
+    }
+    #mask {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 99999;
+      background-color: #3d566e;
+    }
+    #mask button {
+      display: block;
+      width: 100%;
+      height: 40px;
+      font-weight: bold;
+      font-size: 1.6rem;
+    }
+      #showoff {
+        color: red;
+      }
+    .hide {
+      display: none;
+    }
+
+    .img-responsive {
+      width: 100%;
+    }
+    .fixtop {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+  </style>
+</head>
+<body>
+<img style="width:0;height:0;overflow:hidden" src="images/oba-wx.jpg" alt="">
+<div id="mask" class="textcenter hide">
+  <p><img src="images/oba-mask.jpg" width="160" height="160" alt=""></p>
+  <h3>你承包了<span id="score"></span>个欧巴！！还有人能承包得比你多？</h3>
+  <div class="row">
+    <button id="showoff">炫耀一下</button>
+  </div>
+  <div class="row">
+    <button id="startover">再来一次</button>
+  </div>
+  <img src="images/weixin.png" id="wxshareimg" class="img-responsive fixtop hide" alt="">
+</div>
+
+<h1 class="textcenter">承包欧巴</h1>
+<p class="textcenter">点一下欧巴就能承包一个他，小心别承包怪蜀黍噢……你还有<span id="timeremain">20</span>秒</p>
+<div class="row row-game">
+  <div class="targetwrap">
+    <span id="oba" class="target"></span>
+  </div>
+</div>
+<div class="row row-game">
+  <div class="targetwrap">
+    <span id="baoz" class="target"></span>
+  </div>
+</div>
+<script async="async">
+(function() {
+  // utils
+  var eachEl = function(selector, fn) {
+    var els = Array.prototype.slice.call(document.querySelectorAll(selector));
+    els.forEach(fn);
+  };
+
+  var bindEvent = function(el, events, handler) {
+    if (typeof events === 'string') {
+      events = [events];
+    }
+    events.forEach(function(event) {
+      // context will be el itself
+      el.addEventListener(event, handler.bind(el), false);
+    });
+  };
+
+  var hasClass = function(element, className) {
+    return element.className && new RegExp("(^|\\s)" + className + "(\\s|$)").test(element.className);
+  }
+
+  var possib = function(limit) {
+    return Math.random() < limit;
+  };
+
+  // Change color of wrapper when user taps for better user experience
+  eachEl('.targetwrap', function(el) {
+    bindEvent(el, ['touchstart', 'touchend'], function(e) {
+      if (hasClass(this, 'tap')) {
+        this.className = this.className.replace(/\btap\b/,'');
+      }
+      else {
+        this.className = this.className + ' tap';
+      }
+    });
+  });
+
+  // Game body
+  var game = {
+    score: 0,
+    started: false,
+    startTime: null,
+    timeLimitSec: 20,
+    timeLimitMSec: 20000,
+    dom: {
+      oba: document.getElementById('oba'),
+      baoz: document.getElementById('baoz'),
+      timeremain: document.getElementById('timeremain'),
+      btnStartOver: document.getElementById('startover'),
+      btnShowOff: document.getElementById('showoff'),
+      mask: document.getElementById('mask'),
+      scoreboard: document.getElementById('score'),
+      wxshareimg: document.getElementById('wxshareimg')
+    }
+  };
+
+  game.incScore = function() {
+    this.score++;
+    game.dom.scoreboard.innerHTML = this.score;
+  };
+
+  game.tick = function() {
+    if (!possib(0.3)) {
+      return;
+    }
+    var rows = document.querySelectorAll('.row.row-game');
+    rows[0].parentNode.insertBefore(rows[1], rows[0]);
+  };
+
+  game.fail = function() {
+    game.dom.mask.className = game.dom.mask.className.replace(/\bhide\b/,'');
+  };
+
+  game.timeout = game.fail;
+
+  game.reset = function() {
+    this.score = 0;
+    this.started = false;
+    this.startTime = null;
+    game.dom.scoreboard.innerHTML = this.score;
+    game.dom.timeremain.innerHTML = '20';
+    document.title = "承包欧巴——根本停不下来";
+
+    eachEl('.targetwrap', function(el) {
+      if (hasClass(el, 'tap')) {
+        this.className = this.className.replace(/\btap\b/,'');
+      }
+      else {
+        this.className = this.className + ' tap';
+      }
+    });
+
+    if (!hasClass(game.dom.wxshareimg, 'hide')) {
+      game.dom.wxshareimg.className += ' hide';
+    }
+  };
+
+  game.start = function() {
+    game.started = true;
+    game.startTime = Date.now();
+  };
+
+  // When user selected the oba
+  bindEvent(game.dom.oba, 'touchend', function(e) {
+    game.incScore();
+    game.tick();
+    if (!game.started) {
+      game.start();
+    }
+  });
+
+  // When user selected the baoz
+  bindEvent(game.dom.baoz, 'touchend', function(e) {
+    game.fail();
+    e.stopPropagation();
+  });
+
+  // Timer
+  setTimeout(function timeoutCheck() {
+    var timeElapsedMSec;
+    if (game.started) {
+      timeElapsedMSec = (Date.now() - game.startTime);
+      game.dom.timeremain.innerHTML = Math.max( (game.timeLimitMSec - timeElapsedMSec) / 1000, 0);
+      if (timeElapsedMSec >= game.timeLimitMSec) {
+        game.timeout();
+      }
+    }
+    setTimeout(timeoutCheck, 13);
+  }, 13);
+
+  // mask
+  bindEvent(game.dom.btnStartOver, 'touchstart', function() {
+    game.dom.mask.className += ' hide';
+    game.reset();
+  });
+
+  bindEvent(game.dom.btnShowOff, 'touchstart', function() {
+    document.title = "我承包了" + game.score + "个欧巴，我觉得没有人能超过我了呢(ง •̀_•́)ง！"
+    if (hasClass(game.dom.wxshareimg, 'hide')) {
+      game.dom.wxshareimg.className = game.dom.wxshareimg.className.replace(/\bhide\b/,'');
+    }
+  });
+
+  // reset first
+  game.reset();
+})();
+</script>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-50843289-4', 'auto');
+  ga('send', 'pageview');
+</script>
+</body>
+</html>
